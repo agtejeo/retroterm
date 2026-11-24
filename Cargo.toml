@@ -1,0 +1,76 @@
+# Cargo.toml es el "manifiesto" del proyecto: nombre, versión y dependencias.
+# Cargo (el gestor de proyectos de Rust) lo lee para descargar y compilar todo.
+
+[package]
+name = "retroterm"
+version = "0.26.2"
+edition = "2021"   # "edición" del lenguaje: fija qué reglas de sintaxis se usan
+description = "Emulador de terminal con estética retro, perfiles SSH y KeePass"
+authors = ["Alfonso García Tejeo <agtejeo@ugr.es>"]
+# Identificador SPDX de la licencia: GPL versión 3 o posterior (ver LICENSE).
+license = "GPL-3.0-or-later"
+
+[dependencies]
+# vte4 = el componente de terminal (el mismo que usa GNOME Terminal).
+# Trae dentro GTK 4 (vte4::gtk), así no tenemos que cuadrar versiones a mano.
+# Fijada en 0.9: la 0.10 no compila con gtk4 0.11.5 (no encuentra gtk::Accessible).
+# La feature v0_72 activa funciones de VTE >= 0.72, como leer el texto de la pantalla.
+vte4 = { version = "0.9", features = ["v0_72"] }
+
+# serde = la librería estándar "de facto" para convertir structs a/desde texto.
+# La "feature" derive nos deja escribir #[derive(Serialize, Deserialize)].
+serde = { version = "1", features = ["derive"] }
+
+# toml = el formato del fichero de perfiles (el mismo que usa este Cargo.toml).
+toml = "0.8"
+
+# keyring = acceso al llavero del sistema. Con "sync-secret-service" habla con
+# KWallet / GNOME Keyring por D-Bus; "crypto-rust" cifra el envío del secreto.
+# Necesita la librería de desarrollo de D-Bus (en openSUSE: dbus-1-devel).
+keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
+
+# libc = los tipos de C (c_int, c_char…) y sus funciones (calloc, strdup,
+# free) para nuestra conexión propia con PAM (src/pam_ffi.rs). Es Rust puro.
+# PAM en sí sigue haciendo falta al enlazar: pam-devel (openSUSE, Fedora) o
+# libpam0g-dev (Debian, Ubuntu). Ya NO hace falta libclang.
+libc = "0.2"
+
+# keepass = lector de ficheros KeePass (.kdbx). Solo lo usamos para LEER.
+# Fijada EXACTAMENTE ("=") en 0.8.12: la 0.8.21 cambió la estructura de grupos
+# (quitó `Node` y `children`) sin cambiar de versión "mayor".
+keepass = "=0.8.12"
+
+# Descifrar un .kdbx (Argon2/AES) es lentísimo sin optimizar. Esto compila
+# las DEPENDENCIAS optimizadas incluso con `cargo run` (modo depuración);
+# nuestro código sigue compilándose rápido.
+[profile.dev.package."*"]
+opt-level = 3
+
+# ---------------------------------------------------------------------------
+# Paquete .deb (Debian 13 / Ubuntu 24.04). Lo lee la herramienta `cargo deb`
+# (ver empaquetado/construir-deb.sh). Cargo ignora las secciones
+# [package.metadata.*]: son para herramientas externas como esta.
+[package.metadata.deb]
+maintainer = "Alfonso García Tejeo <agtejeo@ugr.es>"
+copyright = "2026, Alfonso García Tejeo <agtejeo@ugr.es>. Fuente VT323: SIL Open Font License 1.1"
+section = "x11"
+priority = "optional"
+extended-description = """\
+Emulador de terminal personal con fuente y cursor retro, fósforo \
+verde/ámbar/blanco, efectos CRT, pestañas, perfiles de conexión SSH, \
+contraseñas en el llavero del sistema, guiones post-conexión y lectura de \
+contraseñas de root desde un fichero KeePass."""
+# $auto = las librerías que usa el ejecutable (GTK 4, VTE, D-Bus...),
+# calculadas por dpkg-shlibdeps. Más el cliente de ssh.
+depends = "$auto, openssh-client"
+# [origen, destino, permisos]. "target/release/..." se adapta solo a la
+# carpeta de compilación real.
+assets = [
+    ["target/release/retroterm", "usr/bin/", "755"],
+    ["empaquetado/es.personal.RetroTerm.desktop", "usr/share/applications/", "644"],
+    ["empaquetado/es.personal.RetroTerm.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    ["empaquetado/VT323-Regular.ttf", "usr/share/fonts/truetype/retroterm/", "644"],
+    ["empaquetado/OFL-VT323.txt", "usr/share/doc/retroterm/OFL-VT323.txt", "644"],
+    ["CHANGELOG.md", "usr/share/doc/retroterm/CHANGELOG.md", "644"],
+    ["empaquetado/pam/retroterm-debian", "etc/pam.d/retroterm", "644"],
+]

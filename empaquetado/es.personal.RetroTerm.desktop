@@ -1,0 +1,13 @@
+# RetroTerm - Copyright (C) 2026 Alfonso García Tejeo <agtejeo@ugr.es> - GPL-3.0-or-later
+[Desktop Entry]
+Type=Application
+Name=RetroTerm
+GenericName=Emulador de terminal
+Comment=Terminal con estética retro, perfiles SSH y KeePass
+Exec=retroterm
+Icon=es.personal.RetroTerm
+Terminal=false
+Categories=System;TerminalEmulator;
+Keywords=terminal;ssh;retro;keepass;
+StartupNotify=true
+StartupWMClass=es.personal.RetroTerm

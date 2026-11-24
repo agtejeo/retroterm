@@ -1,0 +1,12 @@
+/target
+/target-rpm-*
+/empaquetado/rpms/
+/empaquetado/VT323-Regular.ttf
+/empaquetado/OFL-VT323.txt
+/target-deb-*
+/empaquetado/debs/
+# Restos antiguos (se quedan en el disco, fuera del repositorio)
+/empaquetado_DEBs/
+/empaquetado_RPMs/
+/retroterm/
+/retroterm-fase*.tar.gz

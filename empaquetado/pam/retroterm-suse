@@ -1,0 +1,6 @@
+#%PAM-1.0
+# RetroTerm - Copyright (C) 2026 Alfonso García Tejeo <agtejeo@ugr.es> - GPL-3.0-or-later
+# Servicio PAM de RetroTerm: comprobar la contraseña de tu sesión al
+# desbloquear la pantalla. Solo autenticación y cuenta (no abre sesiones).
+auth     include  common-auth
+account  include  common-account
