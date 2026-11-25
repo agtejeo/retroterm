@@ -3,7 +3,7 @@
 
 [package]
 name = "retroterm"
-version = "0.26.2"
+version = "0.27.0"
 edition = "2021"   # "edición" del lenguaje: fija qué reglas de sintaxis se usan
 description = "Emulador de terminal con estética retro, perfiles SSH y KeePass"
 authors = ["Alfonso García Tejeo <agtejeo@ugr.es>"]
@@ -45,6 +45,13 @@ keepass = "=0.8.12"
 # nuestro código sigue compilándose rápido.
 [profile.dev.package."*"]
 opt-level = 3
+
+# Y NUESTRO código, con una optimización ligera (nivel 1) también en
+# `cargo run`: los salvapantallas dibujan píxel a píxel y sin optimizar iban
+# unas 10 veces más lentos (a pantalla completa, el juego se arrastraba).
+# Compila casi igual de rápido y se sigue pudiendo depurar.
+[profile.dev]
+opt-level = 1
 
 # ---------------------------------------------------------------------------
 # Paquete .deb (Debian 13 / Ubuntu 24.04). Lo lee la herramienta `cargo deb`

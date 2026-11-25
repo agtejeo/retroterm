@@ -97,7 +97,7 @@ pub fn abrir_perfil(app: &gtk::Application, perfil: &Perfil, clave: Option<Strin
             // es la segunda barrera, por si llegan por otro camino.
             comando.push(String::from("--"));
             comando.push(format!("{}@{}", perfil.usuario, perfil.host));
-            abrir_pestana(app, &perfil.nombre, comando, false, None)
+            abrir_pestana(app, &titulo_ssh(perfil), comando, false, None)
         }
     };
 
@@ -319,6 +319,17 @@ fn cerrar_pestana(terminal: &Terminal, volver_al_inicio: bool) {
         }
     }
 
+    // Al quitar la pestaña, GTK muestra otra, pero el foco del teclado no
+    // la sigue (se quedaba en la terminal que acabamos de quitar): hacía
+    // falta pulsar con el ratón para escribir. Se lo damos a la terminal de
+    // la pestaña que queda activa. Con la pantalla bloqueada, no: el foco
+    // debe seguir en la caja de contraseña (si p. ej. un ssh caduca solo).
+    if cuaderno.n_pages() > 0 && !bloqueo::esta_bloqueado() {
+        if let Some(terminal) = terminal_activa(&cuaderno) {
+            terminal.grab_focus();
+        }
+    }
+
     if cuaderno.n_pages() == 0 {
         if let Some(ventana) = cuaderno.root().and_downcast::<gtk::Window>() {
             let app = ventana.application();
@@ -343,9 +354,12 @@ fn cerrar_pestana(terminal: &Terminal, volver_al_inicio: bool) {
 }
 
 /// La pestaña: el título y un botón ✕ para cerrarla.
+/// Con el botón derecho sobre ella se puede renombrar (`instalar_renombrar`).
 fn etiqueta_pestana(titulo: &str, terminal: &Terminal) -> gtk::Box {
     let caja = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-    caja.append(&gtk::Label::new(Some(titulo)));
+    let texto = gtk::Label::new(Some(titulo));
+    caja.append(&texto);
+    instalar_renombrar(&caja, &texto, terminal, titulo);
 
     let boton_cerrar = gtk::Button::from_icon_name("window-close-symbolic");
     boton_cerrar.set_has_frame(false);
@@ -355,6 +369,145 @@ fn etiqueta_pestana(titulo: &str, terminal: &Terminal) -> gtk::Box {
     caja.append(&boton_cerrar);
 
     caja
+}
+
+/// Título de la pestaña de un perfil SSH: «perfil / servidor».
+///
+/// Un mismo perfil sirve para varios servidores (p. ej. «WEB / NODOS» con
+/// web01…web19, cambiando el servidor en la ventana de conexiones): así
+/// cada pestaña dice a cuál está conectada. Si el perfil se llama igual que
+/// el servidor, solo una vez.
+fn titulo_ssh(perfil: &Perfil) -> String {
+    if perfil.nombre == perfil.host {
+        perfil.host.clone()
+    } else {
+        // `format!` construye un String nuevo (como `sprintf`, pero seguro).
+        format!("{} / {}", perfil.nombre, perfil.host)
+    }
+}
+
+/// Clic derecho sobre una pestaña: menú «Cambiar nombre…» / «Nombre original».
+///
+/// El nombre nuevo vive SOLO en la pestaña (su `Label` y su texto de menú,
+/// del que sale el título de la ventana): no se guarda en ningún sitio y
+/// desaparece al cerrarla. `original` es el nombre del perfil, para volver a él.
+fn instalar_renombrar(caja: &gtk::Box, texto: &gtk::Label, terminal: &Terminal, original: &str) {
+    let clic = gtk::GestureClick::new();
+    clic.set_button(3); // botón derecho
+    // `to_owned()`: copiamos el &str prestado a un String propio, porque el
+    // closure vive más que esta función y no puede quedarse con un préstamo.
+    let original = original.to_owned();
+    // Referencias DÉBILES: el gesto vive dentro de la propia pestaña; si el
+    // closure sujetara la caja o la terminal con referencias normales,
+    // formaría un ciclo que impediría liberarlas al cerrar la pestaña.
+    let caja_debil = caja.downgrade();
+    let texto_debil = texto.downgrade();
+    let terminal_debil = terminal.downgrade();
+    clic.connect_pressed(move |_gesto, _pulsaciones, x, y| {
+        let (Some(caja), Some(texto), Some(terminal)) =
+            (caja_debil.upgrade(), texto_debil.upgrade(), terminal_debil.upgrade())
+        else {
+            return;
+        };
+        mostrar_menu_renombrar(&caja, &texto, &terminal, &original, x, y);
+    });
+    caja.add_controller(clic);
+}
+
+/// El menú emergente de `instalar_renombrar`. Primero ofrece las opciones;
+/// «Cambiar nombre…» lo convierte en un campo de texto (Intro aplica, Esc cancela).
+fn mostrar_menu_renombrar(
+    caja: &gtk::Box,
+    texto: &gtk::Label,
+    terminal: &Terminal,
+    original: &str,
+    x: f64,
+    y: f64,
+) {
+    let emergente = gtk::Popover::new();
+    // Clase CSS propia: el menú cuelga de la pestaña y, sin ella, le llegarían
+    // los colores de la pestaña ACTIVA (letras del color del fondo, en vídeo
+    // inverso): «Cambiar nombre…» salía invisible. Ver tema.rs.
+    emergente.add_css_class("renombrar");
+    emergente.set_parent(caja);
+    emergente.set_has_arrow(false);
+    emergente.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+    // Igual que en el menú de la terminal: al cerrarse, desengancharlo.
+    emergente.connect_closed(|emergente| {
+        let emergente = emergente.clone();
+        glib::idle_add_local_once(move || emergente.unparent());
+    });
+
+    let opciones = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let boton_cambiar = gtk::Button::with_label("Cambiar nombre…");
+    boton_cambiar.set_has_frame(false);
+    opciones.append(&boton_cambiar);
+    // «Nombre original» solo tiene sentido si ya se cambió.
+    if texto.text() != original {
+        let boton_original = gtk::Button::with_label("Nombre original");
+        boton_original.set_has_frame(false);
+        // Débil: el botón vive DENTRO del menú; una referencia normal al
+        // menú desde aquí sería un ciclo y el menú nunca se liberaría.
+        let (texto, terminal, emergente_debil) = (texto.clone(), terminal.clone(), emergente.downgrade());
+        let original = original.to_owned();
+        boton_original.connect_clicked(move |_| {
+            renombrar_pestana(&texto, &terminal, &original);
+            if let Some(emergente) = emergente_debil.upgrade() {
+                emergente.popdown();
+            }
+        });
+        opciones.append(&boton_original);
+    }
+    emergente.set_child(Some(&opciones));
+
+    // «Cambiar nombre…»: el contenido del menú pasa a ser un campo de texto
+    // con el nombre actual seleccionado (escribir lo sustituye).
+    {
+        let (texto, terminal, emergente_debil) = (texto.clone(), terminal.clone(), emergente.downgrade());
+        boton_cambiar.connect_clicked(move |_| {
+            let Some(emergente) = emergente_debil.upgrade() else {
+                return;
+            };
+            let campo = gtk::Entry::new();
+            campo.set_text(&texto.text());
+            campo.set_width_chars(24);
+            emergente.set_child(Some(&campo));
+            campo.grab_focus();
+            campo.select_region(0, -1); // -1 = hasta el final
+            let (texto, terminal, emergente_debil) = (texto.clone(), terminal.clone(), emergente.downgrade());
+            // Intro en el campo. (Esc ya lo gestiona el Popover: se cierra.)
+            campo.connect_activate(move |campo| {
+                // `trim()` quita espacios de los extremos; vacío = no cambiar.
+                let nuevo = campo.text().trim().to_owned();
+                if !nuevo.is_empty() {
+                    renombrar_pestana(&texto, &terminal, &nuevo);
+                }
+                if let Some(emergente) = emergente_debil.upgrade() {
+                    emergente.popdown();
+                }
+            });
+        });
+    }
+    emergente.popup();
+}
+
+/// Pone `nombre` en la pestaña de `terminal` y, si es la activa, en el título
+/// de la ventana. Solo en memoria.
+fn renombrar_pestana(texto: &gtk::Label, terminal: &Terminal, nombre: &str) {
+    texto.set_text(nombre);
+    let Some(pagina) = crt::pagina_de(terminal) else {
+        return;
+    };
+    let Some(cuaderno) = terminal
+        .ancestor(gtk::Notebook::static_type())
+        .and_downcast::<gtk::Notebook>()
+    else {
+        return;
+    };
+    cuaderno.set_menu_label_text(&pagina, nombre);
+    if cuaderno.page_num(&pagina) == cuaderno.current_page() {
+        poner_titulo(&cuaderno, &pagina);
+    }
 }
 
 /// El Notebook (el widget de pestañas) de la ventana de terminales.
@@ -618,6 +771,20 @@ fn crear_ventana(app: &gtk::Application) -> gtk::Notebook {
     }
     ventana.add_action(&accion_bloc);
 
+    // Tamaño de letra: Ctrl + / Ctrl − / Ctrl 0. Las tres acciones hacen lo
+    // mismo con un número distinto (+1, −1, 0 = por defecto), así que las
+    // creamos en un bucle. `i32` porque puede ser negativo.
+    for (nombre, cambio) in [("letra-mayor", 1), ("letra-menor", -1), ("letra-normal", 0)] {
+        let accion = gio::SimpleAction::new(nombre, None);
+        let app = app.clone();
+        accion.connect_activate(move |_, _| {
+            if !bloqueo::esta_bloqueado() {
+                cambiar_tamano(&app, cambio);
+            }
+        });
+        ventana.add_action(&accion);
+    }
+
     // ATAJOS. Usamos un ShortcutController en fase de CAPTURA: los eventos de
     // teclado recorren el árbol de widgets de la ventana hacia abajo
     // ("captura") y luego hacia arriba ("burbuja"). En captura, la ventana ve
@@ -635,6 +802,16 @@ fn crear_ventana(app: &gtk::Application) -> gtk::Notebook {
         ("<Control>comma", "win.preferencias"),
         ("<Control><Shift>l", "win.bloquear"),
         ("<Control><Shift>b", "win.bloc"),
+        // Letra. En el teclado español «+» tiene tecla propia (`plus`); en
+        // el inglés está en la del «=» con Mayúsculas, así que valen las
+        // dos. `KP_Add`/`KP_Subtract`: las del teclado numérico.
+        ("<Control>plus", "win.letra-mayor"),
+        ("<Control>equal", "win.letra-mayor"),
+        ("<Control>KP_Add", "win.letra-mayor"),
+        ("<Control>minus", "win.letra-menor"),
+        ("<Control>KP_Subtract", "win.letra-menor"),
+        ("<Control>0", "win.letra-normal"),
+        ("<Control>KP_0", "win.letra-normal"),
     ] {
         atajos.add_shortcut(gtk::Shortcut::new(
             gtk::ShortcutTrigger::parse_string(tecla),
@@ -645,6 +822,29 @@ fn crear_ventana(app: &gtk::Application) -> gtk::Notebook {
 
     ventana.present();
     cuaderno
+}
+
+/// Sube (`cambio` = 1), baja (−1) o restablece (0) el tamaño de letra.
+///
+/// Cambia el ajuste global, igual que el selector de Ajustes: se guarda en
+/// ajustes.toml y se aplica a todas las pestañas y ventanas.
+fn cambiar_tamano(app: &gtk::Application, cambio: i32) {
+    ajustes::cambiar(|a| {
+        a.tamano = if cambio == 0 {
+            // `Ajustes::default()` crea unos ajustes de fábrica; solo
+            // queremos su tamaño.
+            ajustes::Ajustes::default().tamano
+        } else {
+            // `saturating_add_signed`: suma un número con signo a un u32
+            // sin pasarse de los límites del tipo (8 − 1 no da error).
+            // `clamp(min, max)`: lo deja dentro de [min, max].
+            a.tamano
+                .saturating_add_signed(cambio)
+                .clamp(ajustes::TAMANO_MIN, ajustes::TAMANO_MAX)
+        };
+    });
+    tema::recargar_estilos();
+    aplicar_ajustes(app);
 }
 
 /// ¿El punto (x, y) del cuaderno cae en el hueco vacío de la barra de pestañas?

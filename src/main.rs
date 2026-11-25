@@ -43,6 +43,7 @@ mod boveda;
 mod crt;
 mod desbloqueo;
 mod halo;
+mod invasion;
 mod lanzador;
 mod llavero;
 mod lluvia;
@@ -55,6 +56,7 @@ mod perfil;
 mod preferencias;
 mod salvapantallas;
 mod sesion;
+mod sobrevuelo;
 mod tema;
 mod ventana_terminal;
 

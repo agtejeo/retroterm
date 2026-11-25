@@ -9,6 +9,71 @@ mientras la versión sea 0.x, cada versión "menor" (0.**x**.0) añade funciones
 La versión de verdad está en `Cargo.toml`; al publicar una nueva, se añade su
 sección aquí arriba del todo.
 
+Desde la 0.27.0, cada versión se describe en español y en inglés.
+*Since 0.27.0, each release is described in Spanish and English.*
+
+## [0.27.0] - 2026-11-25
+### Añadido
+- **Salvapantallas «Invasión»** (`invasion.rs`): un cañón automático defiende
+  la base contra oleadas de alienígenas generados al azar; partida sin fin y
+  sin intervención humana.
+- **Salvapantallas «Sobrevuelo»** (`sobrevuelo.rs`): vuelo sin fin sobre un
+  terreno de triángulos con sombreado plano, niebla, lagos y curvas suaves.
+  Paisaje nuevo en cada bloqueo.
+- **Tamaño de letra con `Ctrl` `+` / `Ctrl` `-`** (y `Ctrl` `0` para volver
+  al de siempre), en todas las pestañas a la vez.
+- **Renombrar pestañas**: clic derecho sobre una pestaña → «Cambiar nombre…»
+  o «Nombre original». Solo en memoria: no se guarda en ningún sitio.
+- **Renombrar perfiles**: botón «Renombrar…» en la ventana de conexiones. La
+  contraseña de un perfil local pasa al nombre nuevo y se actualiza la última
+  conexión. Para copiar un perfil: cambiar el nombre y Guardar.
+- **Casilla «Sonidos de aviso»** en Ajustes → Texto: la campana de la
+  terminal (p. ej. al borrar sin nada que borrar) y los pitidos de los campos
+  de texto. **Desactivada por defecto.**
+### Cambiado
+- Las pestañas SSH se titulan «perfil / servidor» (una sola vez si se llaman
+  igual), para distinguir varias conexiones del mismo perfil.
+- La caja de contraseña del bloqueo se oculta con `Esc` o tras 10 s sin
+  teclear, y vuelve con el ratón o una tecla.
+- `[profile.dev] opt-level = 1`: con `cargo run`, los salvapantallas a
+  pantalla completa iban unas 10 veces más lentos.
+### Corregido
+- Sin perfiles guardados no se podía crear el primero: el desplegable siempre
+  dejaba elegido «localhost». Ahora hay una entrada fija «+ Perfil nuevo».
+- Al cerrar una pestaña, la que pasa a estar activa recibe el foco del
+  teclado (antes había que pulsar en ella con el ratón).
+
+### Added
+- **«Invasion» screensaver** (`invasion.rs`): an automatic cannon defends
+  its base against waves of randomly generated aliens; an endless game with
+  no human input.
+- **«Flyover» screensaver** (`sobrevuelo.rs`): an endless flight over
+  flat-shaded triangle terrain with fog, lakes and smooth turns. A new
+  landscape every time the screen locks.
+- **Font size with `Ctrl` `+` / `Ctrl` `-`** (and `Ctrl` `0` to reset it),
+  applied to every tab at once.
+- **Rename tabs**: right-click a tab → «Change name…» or «Original name».
+  In memory only: it is never saved anywhere.
+- **Rename profiles**: «Rename…» button in the connection window. A local
+  profile's password moves to the new name and the last connection is
+  updated. To copy a profile: change its name and Save.
+- **«Warning sounds» checkbox** in Settings → Text: the terminal bell (e.g.
+  pressing Backspace with nothing to delete) and text-field beeps. **Off by
+  default.**
+### Changed
+- SSH tabs are titled «profile / server» (only once if both are the same),
+  to tell apart several connections made with the same profile.
+- The lock screen's password box hides with `Esc` or after 10 s without
+  typing, and comes back with the mouse or a key.
+- `[profile.dev] opt-level = 1`: with `cargo run`, full-screen screensavers
+  were about 10 times slower.
+### Fixed
+- With no saved profiles, the first one could not be created: the drop-down
+  always kept «localhost» selected. There is now a fixed «+ New profile»
+  entry (shown as «+ Perfil nuevo»; the interface is in Spanish).
+- When a tab is closed, the tab that becomes active gets the keyboard focus
+  (before, you had to click on it).
+
 ## [0.26.2] - 2026-11-23
 ### Corregido
 - Empaquetado RPM: `retroterm.spec` tenía cinco rutas de `%files`

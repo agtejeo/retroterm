@@ -30,8 +30,10 @@ use gtk::{cairo, gdk, glib};
 use vte4::gtk;
 
 use crate::ajustes::{self, Salvapantallas};
+use crate::invasion;
 use crate::lluvia;
 use crate::osciloscopio;
+use crate::sobrevuelo;
 
 /// La limpieza de restos se reparte en este número de franjas horizontales:
 /// en cada paso se limpia una sola, para que el coste por fotograma sea
@@ -44,6 +46,8 @@ pub fn nuevo() -> gtk::Stack {
     // Cada hijo con un nombre, para poder elegirlo luego por su nombre.
     pila.add_named(&osciloscopio::nuevo(), Some(Salvapantallas::Osciloscopio.id()));
     pila.add_named(&lluvia::nuevo(), Some(Salvapantallas::Lluvia.id()));
+    pila.add_named(&invasion::nuevo(), Some(Salvapantallas::Invasion.id()));
+    pila.add_named(&sobrevuelo::nuevo(), Some(Salvapantallas::Sobrevuelo.id()));
 
     // "map" se emite cada vez que el widget aparece en pantalla, o sea, cada
     // vez que se bloquea. Ese es el momento de mirar qué efecto toca: así un

@@ -29,7 +29,12 @@ appear (borrowing, `Option`/`Result`, closures, `Rc`/`RefCell`, async, FFI…).
   frame and a **phosphor glow** around the letters (a custom GTK widget).
 
 **Terminal**
-- Tabs, with an animated hint on background tabs that receive output.
+- Tabs, with an animated hint on background tabs that receive output. SSH
+  tabs are titled «profile / server»; **right-click a tab to rename it**
+  (only while it is open, never saved).
+- Font size with `Ctrl` `+` / `Ctrl` `-` (`Ctrl` `0` resets it).
+- Terminal bell and text-field beeps are **silent by default** (a checkbox in
+  Settings turns them on).
 - Copy & paste (`Ctrl+Shift+C/V`, `Shift+Insert`, right-click menu, middle
   button) and optional **copy on select** to the regular clipboard.
 - Optional warning before **pasting several lines into a root shell**
@@ -42,6 +47,7 @@ appear (borrowing, `Option`/`Result`, closures, `Rc`/`RefCell`, async, FFI…).
 - Connection window with **SSH profiles** and **local profiles** (a command
   run in your shell, e.g. a VPN client), plus a fixed
   «localhost · local session» entry. The last connection used is preselected.
+  Profiles can be renamed («Rename…») or copied (change the name and Save).
 - Passwords stored in the **system keyring** (KWallet / GNOME Keyring through
   Secret Service) and typed automatically when ssh asks for them. One-time
   codes (OTP) are left for you to type.
@@ -58,8 +64,12 @@ appear (borrowing, `Option`/`Result`, closures, `Rc`/`RefCell`, async, FFI…).
 **Lock screen**
 - Lock with the padlock button, `Ctrl+Shift+L` or automatically after N idle
   minutes. Unlock with **your Linux session password** (PAM).
-- Two screensavers: a **Lissajous oscilloscope** with phosphor persistence,
-  or a **rain of phosphor letters**.
+- Four screensavers: a **Lissajous oscilloscope** with phosphor persistence,
+  a **rain of phosphor letters**, **Invasion** (an automatic cannon against
+  waves of randomly generated aliens) and **Flyover** (an endless flight over
+  flat-shaded polygon terrain).
+- The password box appears when you move the mouse or press a key, and hides
+  again with `Esc` or after 10 s without typing.
 
 ### Keyboard shortcuts
 
@@ -70,6 +80,7 @@ appear (borrowing, `Option`/`Result`, closures, `Rc`/`RefCell`, async, FFI…).
 | `Ctrl+Shift+C` / `Ctrl+Shift+V`, `Shift+Insert` | Copy / paste |
 | `Ctrl+Shift+B` | Show / hide the notepad |
 | `Ctrl+,` | Settings |
+| `Ctrl` `+` / `Ctrl` `-` / `Ctrl` `0` | Larger / smaller / default font size |
 | `Ctrl+Shift+L` | Lock |
 
 ### Security design
@@ -202,6 +213,11 @@ FFI…).
 
 **Terminal**
 - Pestañas, con un aviso animado en las de segundo plano que reciben texto.
+  Las de SSH se titulan «perfil / servidor»; **con el botón derecho se
+  renombran** (solo mientras están abiertas, no se guarda).
+- Tamaño de letra con `Ctrl` `+` / `Ctrl` `-` (`Ctrl` `0`, el de siempre).
+- La campana de la terminal y los pitidos de los campos de texto, **en
+  silencio por defecto** (una casilla en Ajustes los activa).
 - Copiar y pegar (`Ctrl+Mayús+C/V`, `Mayús+Insert`, menú con clic derecho,
   botón central) y **copiar al seleccionar** al portapapeles normal (opcional).
 - Aviso opcional antes de **pegar varias líneas en una shell de root** (cada
@@ -215,6 +231,8 @@ FFI…).
 - Ventana de conexiones con **perfiles SSH** y **perfiles locales** (una orden
   que se ejecuta en tu shell, p. ej. un cliente VPN), más la entrada fija
   «localhost · sesión local». Sale elegida la última conexión usada.
+  Los perfiles se pueden renombrar («Renombrar…») o copiar (cambiar el
+  nombre y Guardar).
 - Contraseñas en el **llavero del sistema** (KWallet / GNOME Keyring, vía
   Secret Service), tecleadas solas cuando ssh las pide. Los códigos de un solo
   uso (OTP) los tecleas tú.
@@ -231,8 +249,12 @@ FFI…).
 **Bloqueo**
 - Con el botón candado, `Ctrl+Mayús+L` o solo tras N minutos sin tocarlo. Se
   desbloquea con **la contraseña de tu sesión de Linux** (PAM).
-- Dos salvapantallas: un **osciloscopio** (curvas de Lissajous) con
-  persistencia de fósforo, o una **lluvia de letras de fósforo**.
+- Cuatro salvapantallas: un **osciloscopio** (curvas de Lissajous) con
+  persistencia de fósforo, una **lluvia de letras de fósforo**, **Invasión**
+  (un cañón automático contra oleadas de alienígenas generados al azar) y
+  **Sobrevuelo** (vuelo sin fin sobre un terreno de polígonos).
+- La caja de la contraseña aparece al mover el ratón o pulsar una tecla, y
+  se oculta con `Esc` o tras 10 s sin teclear.
 
 ### Atajos de teclado
 
@@ -243,6 +265,7 @@ FFI…).
 | `Ctrl+Mayús+C` / `Ctrl+Mayús+V`, `Mayús+Insert` | Copiar / pegar |
 | `Ctrl+Mayús+B` | Mostrar / ocultar el bloc de notas |
 | `Ctrl+,` | Ajustes |
+| `Ctrl` `+` / `Ctrl` `-` / `Ctrl` `0` | Letra más grande / más pequeña / normal |
 | `Ctrl+Mayús+L` | Bloquear |
 
 ### Seguridad
@@ -381,3 +404,13 @@ Font License 1.1.
 - [x] Ventana de conexiones: entrada fija «localhost · sesión local» y se recuerda la última conexión usada
 - [x] Salvapantallas de bloqueo a elegir en Ajustes → Bloqueo: osciloscopio (Lissajous) o lluvia de letras de fósforo
 - [x] PAM con FFI propio (sin clang para compilar)
+- [x] Ventana de conexiones: entrada fija «+ Perfil nuevo» (sin perfiles no se podía crear el primero)
+- [x] Tamaño de letra con Ctrl++ / Ctrl+- (y Ctrl+0 para el tamaño por defecto)
+- [x] Salvapantallas «Invasión»: cañón automático contra oleadas de alienígenas generados al azar
+- [x] Salvapantallas «Sobrevuelo»: terreno poligonal infinito con sombreado plano, niebla, lagos y curvas
+- [x] Caja de contraseña del bloqueo: se oculta con Esc o tras 10 s sin teclear
+- [x] Sonidos de aviso (campana de la terminal y campos de texto) activables en Ajustes; en silencio por defecto
+- [x] Al cerrar una pestaña, la que queda activa recibe el foco del teclado
+- [x] Renombrar pestañas con el botón derecho (solo mientras están abiertas)
+- [x] Pestañas SSH con «perfil / servidor»
+- [x] Renombrar perfiles (botón «Renombrar…» en la ventana de conexiones)

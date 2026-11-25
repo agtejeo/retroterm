@@ -98,6 +98,10 @@ pub fn aplicar(terminal: &Terminal, ajustes: &Ajustes) {
     terminal.set_cursor_shape(CursorShape::Block);
     terminal.set_cursor_blink_mode(CursorBlinkMode::On);
     terminal.set_bold_is_bright(true);
+
+    // La «campana»: cuando un programa envía el carácter BEL (p. ej. bash
+    // al pulsar Retroceso sin nada que borrar), VTE pita. Lo decide el ajuste.
+    terminal.set_audible_bell(ajustes.sonido);
 }
 
 // El "proveedor" de CSS de toda la aplicación. Lo guardamos para poder
@@ -122,9 +126,21 @@ pub fn instalar_estilos() {
 }
 
 /// Vuelve a generar el CSS con los ajustes actuales.
+///
+/// También aplica el ajuste «Sonido» a los campos de texto de GTK: pitan
+/// (la «campana de error») al borrar sin nada que borrar, al mover el
+/// cursor más allá del final… Es un ajuste global de GTK (`gtk-error-bell`)
+/// que afecta a toda la aplicación. La campana de las TERMINALES va aparte
+/// (`set_audible_bell` en `aplicar`).
 pub fn recargar_estilos() {
-    let css = css(&ajustes::actuales());
+    let ajustes = ajustes::actuales();
+    let css = css(&ajustes);
     PROVEEDOR_CSS.with(|proveedor| proveedor.load_from_data(&css));
+    // `if let Some(...)`: `Settings::default()` es un Option (podría no
+    // haber pantalla); si no lo hay, no hacemos nada.
+    if let Some(preferencias_gtk) = gtk::Settings::default() {
+        preferencias_gtk.set_gtk_error_bell(ajustes.sonido);
+    }
 }
 
 /// CSS de todas las ventanas con los colores y la fuente de los ajustes.
@@ -222,6 +238,43 @@ fn css(ajustes: &Ajustes) -> String {
             }}
             window.terminales notebook > header tab:checked label,
             window.terminales notebook > header tab:checked button {{ color: {fondo}; }}
+
+            /* Menú «Cambiar nombre…» de una pestaña (ventana_terminal.rs). Cuelga
+               de la pestaña: sin estas reglas heredaría las de arriba (en la
+               pestaña activa, letras del color del fondo: invisibles). Los
+               selectores repiten «notebook > header tab» para pesar MÁS que
+               esas reglas (especificidad de CSS). */
+            window.terminales notebook > header tab popover.renombrar contents {{
+                background: {fondo};
+                border: 1px solid {texto};
+                border-radius: 0;
+            }}
+            window.terminales notebook > header tab popover.renombrar button {{
+                background: none;
+                border-radius: 0;
+                padding: 2px 8px;
+            }}
+            window.terminales notebook > header tab popover.renombrar button label {{
+                font-family: \"{fuente}\", monospace;
+                font-size: 18px;
+                color: {texto};
+            }}
+            window.terminales notebook > header tab popover.renombrar button:hover {{ background: {texto}; }}
+            window.terminales notebook > header tab popover.renombrar button:hover label {{ color: {fondo}; }}
+            window.terminales notebook > header tab popover.renombrar entry {{
+                background: {fondo};
+                color: {texto};
+                caret-color: {cursor};
+                border: 1px solid {texto};
+                border-radius: 0;
+                box-shadow: none;
+                font-family: \"{fuente}\", monospace;
+                font-size: 18px;
+            }}
+            window.terminales notebook > header tab popover.renombrar entry selection {{
+                background-color: {texto};
+                color: {fondo};
+            }}
             /* Margen interior de la terminal: que el texto no toque las
                esquinas redondeadas del efecto CRT. */
             window.terminales vte-terminal {{ padding: 18px 26px; }}

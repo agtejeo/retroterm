@@ -40,10 +40,19 @@ use crate::ventana_terminal;
 
 const TEXTO_GUARDADA: &str = "(guardada en el llavero)";
 
-/// La entrada fija del desplegable de perfiles para abrir tu shell local.
-/// Va SIEMPRE la última: así las posiciones 0..n siguen siendo las de los
-/// perfiles guardados y "Guardar"/"Borrar" no necesitan cambiar.
+/// Las dos entradas fijas del desplegable de perfiles van SIEMPRE al final,
+/// detrás de los n perfiles guardados: así las posiciones 0..n siguen
+/// siendo las de los perfiles y "Guardar"/"Borrar" no necesitan cambiar.
+///
+/// Posición n: abrir tu shell local.
 const TEXTO_LOCAL: &str = "localhost · sesión local";
+/// Posición n+1: formulario vacío para crear un perfil.
+///
+/// ¿Por qué una entrada y no «nada elegido»? El `DropDown` de GTK lleva
+/// dentro una `SingleSelection` con «autoselect»: `set_selected(INVALID_
+/// LIST_POSITION)` se IGNORA y siempre queda algo elegido. Sin perfiles, ese
+/// algo era «localhost», y no había forma de crear el primero.
+const TEXTO_NUEVO: &str = "+ Perfil nuevo";
 /// Aviso que se muestra con "localhost" elegido.
 const AVISO_LOCAL: &str = "Sesión local: «Conectar» abre tu shell en una pestaña nueva.";
 
@@ -528,6 +537,11 @@ pub fn mostrar(app: &gtk::Application) {
     // ---- Botones
     let boton_local = gtk::Button::with_label("Terminal local");
     let boton_borrar = gtk::Button::with_label("Borrar");
+    let boton_renombrar = gtk::Button::with_label("Renombrar…");
+    boton_renombrar.set_tooltip_text(Some(
+        "Cambiar el nombre del perfil elegido (para hacer una copia, \
+         cambia el nombre y pulsa Guardar)",
+    ));
     let boton_guardar = gtk::Button::with_label("Guardar");
     let boton_conectar = gtk::Button::with_label("Conectar");
     let boton_ajustes = gtk::Button::with_label("Ajustes");
@@ -537,6 +551,7 @@ pub fn mostrar(app: &gtk::Application) {
         &boton_ajustes,
         &boton_local,
         &boton_borrar,
+        &boton_renombrar,
         &boton_guardar,
         &boton_conectar,
     ] {
@@ -639,14 +654,70 @@ pub fn mostrar(app: &gtk::Application) {
             // aún tuviéramos el borrow_mut, RefCell detendría el programa.
             selector.set_model(Some(&modelo(&perfiles.borrow())));
             if quedan == 0 {
-                // Solo queda "localhost": no elegimos nada, para que el
-                // formulario quede vacío y se pueda escribir un perfil nuevo.
-                selector.set_selected(gtk::INVALID_LIST_POSITION);
-                formulario.limpiar();
+                // Ya no hay perfiles: «+ Perfil nuevo» (formulario vacío).
+                // `set_selected` dispara `aplicar_seleccion`, que lo limpia.
+                selector.set_selected(posicion_nuevo(0));
             } else {
                 selector.set_selected(indice.min(quedan - 1) as u32);
             }
         });
+    }
+
+    // ---- Renombrar: un campo emergente bajo el botón (Intro aplica, Esc cancela).
+    {
+        let (perfiles, formulario, selector) =
+            (perfiles.clone(), formulario.clone(), selector.clone());
+        boton_renombrar.connect_clicked(move |boton| {
+            let indice = selector.selected() as usize;
+            // `.map(|p| p.nombre.clone())`: copiamos solo el nombre, y el
+            // préstamo `borrow()` se suelta al acabar la línea.
+            let Some(actual) = perfiles.borrow().get(indice).map(|p| p.nombre.clone()) else {
+                return; // «localhost» o «+ Perfil nuevo»: no hay perfil que renombrar
+            };
+            let emergente = gtk::Popover::new();
+            emergente.set_parent(boton);
+            emergente.connect_closed(|emergente| {
+                let emergente = emergente.clone();
+                gtk::glib::idle_add_local_once(move || emergente.unparent());
+            });
+            let campo = gtk::Entry::new();
+            campo.set_text(&actual);
+            campo.set_width_chars(24);
+            emergente.set_child(Some(&campo));
+
+            let (perfiles, formulario, selector) =
+                (perfiles.clone(), formulario.clone(), selector.clone());
+            // Débil: el campo vive DENTRO del menú (evita un ciclo, ver CLAUDE.md).
+            let emergente_debil = emergente.downgrade();
+            campo.connect_activate(move |campo| {
+                let nuevo = campo.text().trim().to_owned();
+                if nuevo != actual {
+                    match renombrar_perfil(&perfiles, &selector, indice, &nuevo) {
+                        Ok(()) => formulario
+                            .avisar(&format!("Perfil «{actual}» renombrado a «{nuevo}».")),
+                        Err(mensaje) => formulario.avisar(&mensaje),
+                    }
+                }
+                if let Some(emergente) = emergente_debil.upgrade() {
+                    emergente.popdown();
+                }
+            });
+            emergente.popup();
+            campo.grab_focus();
+            campo.select_region(0, -1);
+        });
+    }
+    // «Renombrar…» solo tiene sentido con un perfil elegido.
+    {
+        let perfiles = perfiles.clone();
+        let boton = boton_renombrar.downgrade(); // débil: ver CLAUDE.md
+        let actualizar = move |selector: &gtk::DropDown| {
+            if let Some(boton) = boton.upgrade() {
+                boton.set_sensitive((selector.selected() as usize) < perfiles.borrow().len());
+            }
+        };
+        actualizar(&selector);
+        selector.connect_selected_notify(actualizar);
     }
 
     // ---- Montaje de la ventana
@@ -825,10 +896,108 @@ fn aplicar_clave(
     }
 }
 
+/// Cambia el nombre del perfil de la posición `indice` a `nuevo`, sin tocar
+/// el resto de sus datos ni su lugar en la lista.
+///
+/// Además de `perfiles.toml`:
+/// - **Llavero:** la contraseña de un perfil SSH va con `usuario@servidor:
+///   puerto` (no con el nombre): nada que hacer. La de un perfil LOCAL va
+///   con su nombre: se copia al nombre nuevo y se borra la antigua. Solo en
+///   memoria, nunca a disco ni a la consola.
+/// - **Última conexión:** si era este perfil, se apunta con el nombre nuevo.
+///
+/// `Result<(), String>`: `Ok(())` = hecho («()» es «nada que devolver»);
+/// `Err(texto)` = el aviso para mostrar.
+fn renombrar_perfil(
+    perfiles: &Perfiles,
+    selector: &gtk::DropDown,
+    indice: usize,
+    nuevo: &str,
+) -> Result<(), String> {
+    if nuevo.is_empty() {
+        return Err(String::from("El nombre no puede quedar vacío."));
+    }
+    // Copia del perfil tal como está (el préstamo se suelta en esta línea).
+    let Some(viejo) = perfiles.borrow().get(indice).cloned() else {
+        return Err(String::from("Elige primero un perfil."));
+    };
+    if nuevo == TEXTO_LOCAL
+        || nuevo == TEXTO_NUEVO
+        || (!viejo.es_local() && nuevo.eq_ignore_ascii_case("localhost"))
+    {
+        return Err(format!("El nombre «{nuevo}» está reservado."));
+    }
+    // `.any(...)`: ¿algún OTRO perfil se llama ya así? (`i != indice` deja
+    // fuera al propio, por si solo cambian mayúsculas/minúsculas).
+    let repetido = perfiles
+        .borrow()
+        .iter()
+        .enumerate()
+        .any(|(i, p)| i != indice && p.nombre == nuevo);
+    if repetido {
+        return Err(format!("Ya hay un perfil llamado «{nuevo}»."));
+    }
+
+    // `..viejo.clone()`: «el resto de campos, como en viejo» (sintaxis de
+    // actualización de structs). Solo cambia el nombre.
+    let renombrado = Perfil {
+        nombre: nuevo.to_owned(),
+        ..viejo.clone()
+    };
+
+    // 1) Llavero (solo perfiles locales): copiar ANTES de guardar la lista,
+    //    para no dejar la contraseña huérfana si el llavero falla.
+    let clave_local = if viejo.es_local() {
+        match llavero::leer(&viejo) {
+            Ok(clave) => clave,
+            Err(error) => return Err(format!("Llavero no disponible: {error}")),
+        }
+    } else {
+        None
+    };
+    if let Some(clave) = &clave_local {
+        if let Err(error) = llavero::guardar(&renombrado, clave) {
+            return Err(format!("Llavero no disponible: {error}"));
+        }
+    }
+
+    // 2) La lista y perfiles.toml (préstamo mutable en su propio bloque).
+    let guardado = {
+        let mut lista = perfiles.borrow_mut();
+        lista[indice] = renombrado.clone();
+        perfil::guardar(&lista)
+    };
+    if let Err(error) = guardado {
+        // Deshacemos: lista y llavero como estaban.
+        perfiles.borrow_mut()[indice] = viejo;
+        if clave_local.is_some() {
+            let _ = llavero::borrar(&renombrado);
+        }
+        return Err(format!("No se pudo guardar: {error}"));
+    }
+    if clave_local.is_some() {
+        // `let _ =`: si falla, solo queda una entrada sobrante en el llavero.
+        let _ = llavero::borrar(&viejo);
+    }
+
+    // 3) Última conexión.
+    if ajustes::actuales().ultima_conexion == UltimaConexion::Perfil(viejo.nombre.clone()) {
+        recordar_conexion(UltimaConexion::Perfil(renombrado.nombre.clone()));
+    }
+
+    // 4) El desplegable, con el perfil renombrado elegido. Fuera de cualquier
+    //    préstamo: `set_model` emite señales que leen `perfiles`.
+    selector.set_model(Some(&modelo(&perfiles.borrow())));
+    selector.set_selected(indice as u32);
+    Ok(())
+}
+
 /// Convierte la lista de perfiles en la lista de nombres que muestra el desplegable.
 fn modelo(lista: &[Perfil]) -> gtk::StringList {
     let mut nombres: Vec<&str> = lista.iter().map(|p| p.nombre.as_str()).collect();
-    nombres.push(TEXTO_LOCAL); // siempre al final (ver TEXTO_LOCAL)
+    // Siempre al final y en este orden (ver TEXTO_LOCAL y TEXTO_NUEVO).
+    nombres.push(TEXTO_LOCAL);
+    nombres.push(TEXTO_NUEVO);
     gtk::StringList::new(&nombres)
 }
 
@@ -836,6 +1005,11 @@ fn modelo(lista: &[Perfil]) -> gtk::StringList {
 /// perfiles, así que su posición es igual al número de perfiles.
 fn es_local(perfiles: &Perfiles, selector: &gtk::DropDown) -> bool {
     selector.selected() as usize == perfiles.borrow().len()
+}
+
+/// Posición de «+ Perfil nuevo»: justo detrás de «localhost».
+fn posicion_nuevo(numero_de_perfiles: usize) -> u32 {
+    numero_de_perfiles as u32 + 1
 }
 
 /// Rellena el formulario según lo elegido en el desplegable.
@@ -846,22 +1020,28 @@ fn aplicar_seleccion(perfiles: &Perfiles, formulario: &Formulario, selector: &gt
     }
     formulario.modo_local(false);
     let indice = selector.selected() as usize; // `as` convierte entre tipos numéricos
-    if let Some(perfil) = perfiles.borrow().get(indice) {
-        formulario.rellenar(perfil);
+    // `get` da `None` si la posición no es de un perfil: es «+ Perfil nuevo»
+    // y toca un formulario vacío (y editable, por el `modo_local(false)`).
+    // `.cloned()` copia el perfil, y el préstamo `borrow()` se suelta al
+    // acabar ESTA línea: así no sigue vivo mientras el formulario emite
+    // señales de GTK (ver la trampa de RefCell en CLAUDE.md).
+    let elegido = perfiles.borrow().get(indice).cloned();
+    match elegido {
+        Some(perfil) => formulario.rellenar(&perfil),
+        None => formulario.limpiar(),
     }
-    // Si no hay nada elegido (INVALID_LIST_POSITION), el formulario se queda
-    // como esté: vacío y editable, para escribir un perfil nuevo.
 }
 
 /// Qué posición del desplegable sale elegida al abrir la ventana: la de la
-/// última conexión usada. Si ese perfil ya no existe, el primero; y si no
-/// hay perfiles, ninguna (formulario vacío para crear uno).
+/// última conexión usada; si ese perfil ya no existe, el primero. Si no hay
+/// perfiles, «+ Perfil nuevo».
 fn posicion_inicial(lista: &[Perfil]) -> u32 {
-    let primera = if lista.is_empty() {
-        gtk::INVALID_LIST_POSITION
-    } else {
-        0
-    };
+    // Sin perfiles, SIEMPRE «+ Perfil nuevo», aunque la última conexión
+    // fuera la local: lo primero que hay que hacer es crear uno.
+    if lista.is_empty() {
+        return posicion_nuevo(0);
+    }
+    let primera = 0;
     // `match` sobre el enum; en `Perfil(nombre)` sacamos el dato de dentro.
     match ajustes::actuales().ultima_conexion {
         UltimaConexion::Local => lista.len() as u32,

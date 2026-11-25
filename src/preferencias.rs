@@ -72,7 +72,11 @@ pub fn mostrar(app: &gtk::Application) {
     }
 
     // ---- Tamaño
-    let selector_tamano = gtk::SpinButton::with_range(8.0, 48.0, 1.0);
+    let selector_tamano = gtk::SpinButton::with_range(
+        ajustes::TAMANO_MIN as f64,
+        ajustes::TAMANO_MAX as f64,
+        1.0,
+    );
     selector_tamano.set_value(actuales.tamano as f64);
     {
         let app = app.clone();
@@ -109,6 +113,12 @@ pub fn mostrar(app: &gtk::Application) {
         actuales.copiar_al_seleccionar,
         app,
         |a, activa| a.copiar_al_seleccionar = activa,
+    );
+    let sonido = casilla(
+        "Sonidos de aviso (campana de la terminal y de los campos de texto)",
+        actuales.sonido,
+        app,
+        |a, activa| a.sonido = activa,
     );
     let monocromo = casilla(
         "Paleta de fósforo (si no: colores originales)",
@@ -319,6 +329,7 @@ pub fn mostrar(app: &gtk::Application) {
             ("Fuente", selector_fuente.upcast_ref()),
             ("Tamaño", selector_tamano.upcast_ref()),
             ("", copiar_al_seleccionar.upcast_ref()),
+            ("", sonido.upcast_ref()),
         ],
     );
     seccion(

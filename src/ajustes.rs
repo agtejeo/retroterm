@@ -69,24 +69,33 @@ impl Fosforo {
     }
 }
 
-/// El efecto de la pantalla de bloqueo. En el fichero: "osciloscopio" o
-/// "lluvia".
+/// El efecto de la pantalla de bloqueo. En el fichero: "osciloscopio",
+/// "lluvia", "invasion" o "sobrevuelo".
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Salvapantallas {
     Osciloscopio,
     Lluvia,
+    Invasion,
+    Sobrevuelo,
 }
 
 impl Salvapantallas {
     /// Todas las opciones, en el orden del desplegable de Ajustes.
-    pub const TODOS: [Salvapantallas; 2] = [Salvapantallas::Osciloscopio, Salvapantallas::Lluvia];
+    pub const TODOS: [Salvapantallas; 4] = [
+        Salvapantallas::Osciloscopio,
+        Salvapantallas::Lluvia,
+        Salvapantallas::Invasion,
+        Salvapantallas::Sobrevuelo,
+    ];
 
     /// El texto que se ve en el desplegable.
     pub fn nombre(self) -> &'static str {
         match self {
             Salvapantallas::Osciloscopio => "Osciloscopio (curvas de Lissajous)",
             Salvapantallas::Lluvia => "Lluvia de letras",
+            Salvapantallas::Invasion => "Invasión (defensa automática)",
+            Salvapantallas::Sobrevuelo => "Sobrevuelo (terreno poligonal)",
         }
     }
 
@@ -95,6 +104,8 @@ impl Salvapantallas {
         match self {
             Salvapantallas::Osciloscopio => "osciloscopio",
             Salvapantallas::Lluvia => "lluvia",
+            Salvapantallas::Invasion => "invasion",
+            Salvapantallas::Sobrevuelo => "sobrevuelo",
         }
     }
 }
@@ -118,6 +129,10 @@ pub enum UltimaConexion {
 
 /// `#[serde(default)]` en el struct: si al fichero le falta algún campo
 /// (p. ej. uno que añadamos en el futuro), se toma de `Default`.
+/// Límites del tamaño de letra (Ajustes y Ctrl + / Ctrl −).
+pub const TAMANO_MIN: u32 = 8;
+pub const TAMANO_MAX: u32 = 48;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Ajustes {
@@ -157,6 +172,9 @@ pub struct Ajustes {
     pub copiar_al_seleccionar: bool,
     /// Preguntar antes de pegar varias líneas en un prompt de root (pegado.rs).
     pub aviso_pegar_root: bool,
+    /// Sonido de la terminal: la «campana» (carácter BEL) que suena, p. ej.,
+    /// al borrar sin nada que borrar. Por defecto, en silencio.
+    pub sonido: bool,
     /// Última conexión usada (va la última: en TOML, las tablas como
     /// `[ultima_conexion]` tienen que ir detrás de los valores sueltos).
     pub ultima_conexion: UltimaConexion,
@@ -186,6 +204,7 @@ impl Default for Ajustes {
             salvapantallas: Salvapantallas::Osciloscopio,
             copiar_al_seleccionar: true,
             aviso_pegar_root: false,
+            sonido: false,
             ultima_conexion: UltimaConexion::Ninguna,
         }
     }

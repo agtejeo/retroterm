@@ -24,7 +24,8 @@
 //!         ├─ (hijo) salvapantallas: gtk::Stack con un DrawingArea por
 //!         │  efecto (osciloscopio, lluvia); ver salvapantallas.rs
 //!         └─ (encima) caja de la contraseña, clase "caja-clave" (oculta
-//!            hasta que mueves el ratón o pulsas una tecla)
+//!            hasta que mueves el ratón o pulsas una tecla; se vuelve a
+//!            ocultar con Esc o tras 10 s sin teclear)
 
 use std::cell::Cell;
 use std::time::{Duration, Instant};
@@ -46,7 +47,17 @@ thread_local! {
     static DESDE: Cell<Instant> = Cell::new(Instant::now());
     /// Última vez que tocaste RetroTerm (para el bloqueo automático).
     static ULTIMA_ACTIVIDAD: Cell<Instant> = Cell::new(Instant::now());
+    /// Última tecla pulsada con la caja de la contraseña a la vista.
+    static ULTIMA_TECLA: Cell<Instant> = Cell::new(Instant::now());
+    /// Sube cada vez que se muestra la caja: el temporizador que la oculta
+    /// recuerda la suya y se para si ya no es la actual (así nunca hay dos
+    /// temporizadores a la vez).
+    static GENERACION_CAJA: Cell<u32> = const { Cell::new(0) };
 }
+
+/// Segundos sin teclear tras los que la caja de la contraseña se oculta
+/// sola (y vuelve a verse solo el salvapantallas).
+const ESPERA_CAJA: Duration = Duration::from_secs(10);
 
 /// ¿Está RetroTerm bloqueado ahora mismo?
 pub fn esta_bloqueado() -> bool {
@@ -140,8 +151,13 @@ pub fn instalar(ventana: &gtk::ApplicationWindow) {
             mostrar_caja(&caja, &entrada); // la primera tecla solo "despierta"
             return glib::Propagation::Stop;
         }
+        // Con la caja a la vista, cada tecla reinicia la cuenta de 10 s.
+        ULTIMA_TECLA.with(|u| u.set(Instant::now()));
         if tecla == gdk::Key::Escape {
-            caja.set_visible(false); // volver al salvapantallas
+            // Volver al salvapantallas (salvo mientras se comprueba).
+            if entrada.is_sensitive() {
+                ocultar_caja(&caja, &entrada);
+            }
             return glib::Propagation::Stop;
         }
         glib::Propagation::Proceed // el resto va a la casilla de la contraseña
@@ -236,9 +252,61 @@ fn desbloquear(ventana: &gtk::Window) {
     ventana_terminal::tras_desbloquear(ventana);
 }
 
+/// Muestra la caja de la contraseña y arranca la cuenta atrás que la
+/// ocultará si pasan 10 s sin teclear.
 fn mostrar_caja(caja: &gtk::Box, entrada: &gtk::PasswordEntry) {
     caja.set_visible(true);
     entrada.grab_focus();
+    ULTIMA_TECLA.with(|u| u.set(Instant::now()));
+
+    // Nueva generación: si quedara un temporizador de antes, se parará solo.
+    let generacion = GENERACION_CAJA.with(|g| {
+        g.set(g.get() + 1);
+        g.get()
+    });
+    // Referencias débiles: si la ventana se cierra, el temporizador no la
+    // mantiene viva (y se para al no poder «subirlas»).
+    let (caja, entrada) = (caja.downgrade(), entrada.downgrade());
+    // Cada medio segundo: ¿sigue a la vista? ¿cuánto hace de la última tecla?
+    glib::timeout_add_local(Duration::from_millis(500), move || {
+        let (Some(caja), Some(entrada)) = (caja.upgrade(), entrada.upgrade()) else {
+            return glib::ControlFlow::Break;
+        };
+        let otra_generacion = GENERACION_CAJA.with(Cell::get) != generacion;
+        if otra_generacion || !caja.is_visible() || !esta_bloqueado() {
+            return glib::ControlFlow::Break; // ya se ocultó por otro lado
+        }
+        // Mientras se comprueba la contraseña (casilla desactivada), no
+        // se oculta: contamos desde ahora.
+        if !entrada.is_sensitive() {
+            ULTIMA_TECLA.with(|u| u.set(Instant::now()));
+            return glib::ControlFlow::Continue;
+        }
+        if ULTIMA_TECLA.with(|u| u.get().elapsed()) >= ESPERA_CAJA {
+            ocultar_caja(&caja, &entrada);
+            return glib::ControlFlow::Break;
+        }
+        glib::ControlFlow::Continue
+    });
+}
+
+/// Oculta la caja de la contraseña y vuelve al salvapantallas: borra lo
+/// que se hubiera escrito a medias y el mensaje de estado, y quita el foco
+/// (para que las teclas no vayan a una casilla invisible).
+fn ocultar_caja(caja: &gtk::Box, entrada: &gtk::PasswordEntry) {
+    entrada.set_text("");
+    // El mensaje de estado es el hermano siguiente de la casilla.
+    // `and_downcast`: si existe Y es una etiqueta, `Some(etiqueta)`.
+    if let Some(estado) = entrada.next_sibling().and_downcast::<gtk::Label>() {
+        estado.set_text("");
+    }
+    caja.set_visible(false);
+    if let Some(ventana) = caja.root().and_downcast::<gtk::Window>() {
+        GtkWindowExt::set_focus(&ventana, None::<&gtk::Widget>);
+    }
+    // Como al bloquear: durante un segundo el ratón no cuenta (si no, la
+    // mano sobre el ratón la volvería a sacar al instante).
+    DESDE.with(|d| d.set(Instant::now()));
 }
 
 /// Busca en la ventana la capa, la caja y la casilla de la contraseña.

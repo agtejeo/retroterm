@@ -9,7 +9,8 @@ RetroTerm: emulador de terminal personal para Linux con estética retro
 (fósforo verde/ámbar/blanco, fuente VT323, efectos CRT), en **Rust + GTK 4 +
 VTE**. Perfiles SSH, contraseñas en el llavero del sistema (KWallet),
 guiones post-conexión ("espera => escribe"), contraseñas de root desde un
-fichero KeePass, pestañas, bloqueo con salvapantallas (osciloscopio) y
+fichero KeePass, pestañas, bloqueo con salvapantallas (osciloscopio, lluvia,
+invasión, sobrevuelo) y
 desbloqueo con la contraseña de sesión (PAM).
 
 - **Autor:** Alfonso García Tejeo <agtejeo@ugr.es>
@@ -37,7 +38,9 @@ desbloqueo con la contraseña de sesión (PAM).
 1. Subir `version` en `Cargo.toml` (0.x.y: x para funciones nuevas, y para
    correcciones).
 2. Añadir la sección de la versión **arriba del todo** en `CHANGELOG.md`
-   (Añadido / Cambiado / Corregido), con la fecha.
+   (Añadido / Cambiado / Corregido), con la fecha. **Desde la 0.27.0, en
+   español y en inglés** (Added / Changed / Fixed), y las notas de la
+   release de GitHub, también bilingües.
 3. Si es una función nueva, marcarla en la hoja de ruta del `README.md`.
 4. Cada fichero `.rs` nuevo lleva la cabecera de licencia:
    `// SPDX-License-Identifier: GPL-3.0-or-later` +
@@ -69,6 +72,8 @@ dile exactamente qué probar.
   `unsafe` del programa vive ahí; hacia fuera solo `autenticar()`.
 - `[profile.dev.package."*"] opt-level = 3`: sin esto, descifrar el .kdbx
   (Argon2) tarda decenas de segundos en modo depuración.
+- `[profile.dev] opt-level = 1` (nuestro código): sin esto, los
+  salvapantallas a pantalla completa van ~10 veces más lentos con `cargo run`.
 - GTK se usa a través de `vte4::gtk` (no hay dependencia directa de gtk4).
 
 ## Mapa de módulos (`src/`)
@@ -97,6 +102,8 @@ dile exactamente qué probar.
 | `salvapantallas.rs` | Elige el efecto (gtk::Stack); `Lienzo` con estela y limpieza de restos; rótulo |
 | `osciloscopio.rs` | Salvapantallas: Lissajous con persistencia (Cairo) |
 | `lluvia.rs` | Salvapantallas: lluvia de letras de fósforo |
+| `invasion.rs` | Salvapantallas: cañón automático contra oleadas de alienígenas al azar; constantes de ajuste arriba; `cargo test invasion -- --nocapture` simula el equilibrio |
+| `sobrevuelo.rs` | Salvapantallas: vuelo sobre terreno de polígonos (ruido de valores, `Vec3` con operadores, algoritmo del pintor, sin antialias por rendimiento) |
 | `sesion.rs` | Comprobar la contraseña de sesión con PAM (servicios `retroterm`, `login`) |
 | `pam_ffi.rs` | FFI propio con libpam (`unsafe`, conversación, `Drop` → `pam_end`) |
 | `acerca.rs` | Diálogo "Acerca de" (versión y autor salen de Cargo.toml) |
@@ -114,7 +121,7 @@ Ventana de terminales (ApplicationWindow, clase CSS "terminales")
    │  │     └─ DrawingArea (capa CRT, no recibe ratón)
    │  └─ bloc de notas (Box, clase "bloc", oculto; bloc.rs)
    └─ capa de bloqueo (Overlay, clase "bloqueo", oculta)
-      ├─ salvapantallas (gtk::Stack: osciloscopio | lluvia, DrawingArea)
+      ├─ salvapantallas (gtk::Stack: osciloscopio | lluvia | invasion | sobrevuelo, DrawingArea)
       └─ caja de contraseña (clase "caja-clave")
 ```
 Las otras ventanas (conexiones, ajustes) llevan la clase CSS "retro".
@@ -135,9 +142,11 @@ siempre `crt::terminal_de()` y `crt::pagina_de()`, nunca `parent()`/`child()`.
   existen en `GtkWindowExt` y en `RootExt`: llama a
   `GtkWindowExt::set_focus(ventana, ...)` / `GtkWindowExt::focus(ventana)`.
 - **PAM:** servicios probados en orden: `retroterm`, `login`. **No usar
-  `kde`** (rechaza a otros programas). `/etc/pam.d/retroterm` usa solo
-  `pam_unix` porque las pilas comunes incluyen `pam_fprintd` (el lector de
-  huellas) y hacen esperar 15-20 s.
+  `kde`** (rechaza a otros programas). Las pilas comunes pueden incluir
+  `pam_fprintd` (el lector de huellas) y hacer esperar 15-20 s; con solo
+  `pam_unix` no hay espera. Aun así, los paquetes siguen con la pila común
+  (decidido el 2026-11-25): con solo `pam_unix`, quien tenga cuentas
+  LDAP/SSSD no podría desbloquear. El README explica cómo quitar la espera.
 - **Seguridad:** nunca escribir contraseñas en disco ni en la consola
   (`eprintln!`). KeePass: solo entradas `root`, solo en memoria.
   Ficheros de configuración: siempre con `ajustes::escribir_privado` (0600,
