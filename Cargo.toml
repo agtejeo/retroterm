@@ -3,7 +3,7 @@
 
 [package]
 name = "retroterm"
-version = "0.27.0"
+version = "0.27.1"
 edition = "2021"   # "edición" del lenguaje: fija qué reglas de sintaxis se usan
 description = "Emulador de terminal con estética retro, perfiles SSH y KeePass"
 authors = ["Alfonso García Tejeo <agtejeo@ugr.es>"]

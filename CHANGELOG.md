@@ -12,6 +12,21 @@ sección aquí arriba del todo.
 Desde la 0.27.0, cada versión se describe en español y en inglés.
 *Since 0.27.0, each release is described in Spanish and English.*
 
+## [0.27.1] - 2026-11-25
+### Corregido
+- Desbloqueo: una contraseña mal tecleada podía tardar ~30 s en rechazarse.
+  Tras fallar con el servicio PAM `retroterm` se probaba también `login`,
+  cuya pila común puede empezar por `pam_fprintd` (espera una huella).
+  Ahora se usa solo el primer servicio que exista (`retroterm`, o `login`
+  si no está instalado).
+
+### Fixed
+- Unlock: a mistyped password could take ~30 s to be rejected. After the
+  `retroterm` PAM service failed, `login` was tried as well, and its common
+  stack may start with `pam_fprintd` (waiting for a fingerprint). Now only
+  the first available service is used (`retroterm`, or `login` if it is not
+  installed).
+
 ## [0.27.0] - 2026-11-25
 ### Añadido
 - **Salvapantallas «Invasión»** (`invasion.rs`): un cañón automático defiende

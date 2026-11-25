@@ -141,7 +141,8 @@ siempre `crt::terminal_de()` y `crt::pagina_de()`, nunca `parent()`/`child()`.
 - **Métodos ambiguos de traits:** `ventana.set_focus(...)` y `ventana.focus()`
   existen en `GtkWindowExt` y en `RootExt`: llama a
   `GtkWindowExt::set_focus(ventana, ...)` / `GtkWindowExt::focus(ventana)`.
-- **PAM:** servicios probados en orden: `retroterm`, `login`. **No usar
+- **PAM:** se usa SOLO el primero que exista de `retroterm`, `login` (probar
+  `login` tras un rechazo hacía esperar ~30 s por `pam_fprintd`). **No usar
   `kde`** (rechaza a otros programas). Las pilas comunes pueden incluir
   `pam_fprintd` (el lector de huellas) y hacer esperar 15-20 s; con solo
   `pam_unix` no hay espera. Aun así, los paquetes siguen con la pila común

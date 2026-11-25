@@ -16,7 +16,7 @@
 //! sitio: Linux solo guarda un hash irreversible en /etc/shadow.
 //!
 //! Qué reglas aplica PAM lo decide un fichero de /etc/pam.d/ (el "servicio").
-//! Probamos, en este orden, los que existan:
+//! Usamos el primero de estos que exista (solo uno; ver `servicios_disponibles`):
 //!   1. "retroterm" -> el que instalan los paquetes RPM / .deb.
 //!   2. "login"     -> el del inicio de sesión, que existe en todas partes
 //!                     (es el que se usa con `cargo run`).
@@ -36,21 +36,21 @@ const SERVICIOS: [&str; 2] = ["retroterm", "login"];
 /// (openSUSE Tumbleweed usa también /usr/lib/pam.d y /usr/etc/pam.d).
 const CARPETAS_PAM: [&str; 3] = ["/etc/pam.d", "/usr/lib/pam.d", "/usr/etc/pam.d"];
 
-/// Los servicios PAM disponibles en este sistema, en orden de preferencia.
+/// El servicio PAM que usaremos: el PRIMERO de `SERVICIOS` que exista.
+///
+/// Solo uno, a propósito: antes, si "retroterm" rechazaba la contraseña
+/// (p. ej. una errata), se probaba también "login", cuya pila común empieza
+/// por `pam_fprintd` (lector de huellas) y esperaba ~30 s antes de decir
+/// que no. Una contraseña mala no va a ser buena con otro servicio.
 fn servicios_disponibles() -> Vec<&'static str> {
-    let mut lista: Vec<&'static str> = SERVICIOS
-        .iter()
-        .copied()
-        .filter(|servicio| {
-            CARPETAS_PAM
-                .iter()
-                .any(|carpeta| Path::new(carpeta).join(servicio).exists())
-        })
-        .collect();
-    if lista.is_empty() {
-        lista.push("login");
-    }
-    lista
+    // `find` devuelve un Option: Some(el primero que cumple) o None.
+    let elegido = SERVICIOS.iter().copied().find(|servicio| {
+        CARPETAS_PAM
+            .iter()
+            .any(|carpeta| Path::new(carpeta).join(servicio).exists())
+    });
+    // `unwrap_or`: si no hay ninguno (None), "login" de todas formas.
+    vec![elegido.unwrap_or("login")]
 }
 
 /// Tu nombre de usuario de Linux.
@@ -62,7 +62,7 @@ pub fn usuario() -> String {
 
 /// ¿Es `clave` la contraseña de tu sesión?
 ///
-/// Prueba los servicios PAM disponibles en orden hasta que uno la acepte.
+/// Usa el servicio PAM elegido por `servicios_disponibles`.
 /// Cada intento se anota en la consola (stderr) con el código de error real
 /// de PAM, para poder diagnosticar si algo falla.
 ///
