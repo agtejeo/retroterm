@@ -103,6 +103,11 @@ Ubuntu **24.04** (and derivatives such as Pop!_OS 24.04 or Linux Mint 22).
 VTE for GTK 4 ≥ 0.72 is required, so EL9, Debian 12 and Ubuntu 22.04 are
 **not** supported.
 
+**macOS** (Apple Silicon, tested on an M1) is supported
+**experimentally**, building from source with Homebrew (see below). There
+are no ready-made macOS packages yet. Passwords go to the macOS Keychain,
+and unlocking uses your Mac password through the system PAM service `login`.
+
 ### Install a package
 
 Ready-made packages are built with the scripts below. On the target machine:
@@ -133,9 +138,14 @@ font, the icon, the menu entry and the PAM service `/etc/pam.d/retroterm`.
    - Fedora: `sudo dnf install gcc pkgconf gtk4-devel vte291-gtk4-devel dbus-devel pam-devel`
    - openSUSE: `sudo zypper install gcc pkgconf 'pkgconfig(gtk4)' 'pkgconfig(vte-2.91-gtk4)' 'pkgconfig(dbus-1)' pam-devel`
    - Arch / Manjaro: `sudo pacman -S base-devel gtk4 vte4`
+   - macOS: Xcode Command Line Tools (`xcode-select --install`) and, with
+     [Homebrew](https://brew.sh), `brew install rustup vte3 pkgconf adwaita-icon-theme`, then
+     `rustup default stable` (Rust can come from rustup instead of step 1;
+     add `/opt/homebrew/opt/rustup/bin` to your `PATH`)
 3. VT323 font (Google Fonts, OFL): copy `VT323-Regular.ttf` to
    `~/.local/share/fonts/` and run `fc-cache -f`. Without it, RetroTerm falls
-   back to the default monospace font.
+   back to the default monospace font. On macOS, double-click the `.ttf` and
+   install it (it goes to `~/Library/Fonts`).
 4. Build and run:
    ```bash
    cargo run                 # debug build and run
@@ -288,6 +298,12 @@ Ubuntu **24.04** (y derivadas como Pop!_OS 24.04 o Linux Mint 22). Hace falta
 VTE para GTK 4 ≥ 0.72, así que EL9, Debian 12 y Ubuntu 22.04 **no** están
 soportados.
 
+**macOS** (Apple Silicon, probado en un M1) funciona de forma
+**experimental**, compilando desde el código con Homebrew (ver más abajo).
+Todavía no hay paquetes para macOS. Las contraseñas van al Llavero de macOS
+y el desbloqueo usa la contraseña del Mac con el servicio PAM `login` del
+sistema.
+
 ### Instalar un paquete
 
 Los paquetes se construyen con los scripts de más abajo. En el equipo de
@@ -320,9 +336,14 @@ la fuente VT323, el icono, la entrada del menú y el servicio PAM
    - Fedora: `sudo dnf install gcc pkgconf gtk4-devel vte291-gtk4-devel dbus-devel pam-devel`
    - openSUSE: `sudo zypper install gcc pkgconf 'pkgconfig(gtk4)' 'pkgconfig(vte-2.91-gtk4)' 'pkgconfig(dbus-1)' pam-devel`
    - Arch / Manjaro: `sudo pacman -S base-devel gtk4 vte4`
+   - macOS: Command Line Tools de Xcode (`xcode-select --install`) y, con
+     [Homebrew](https://brew.sh), `brew install rustup vte3 pkgconf adwaita-icon-theme` y luego
+     `rustup default stable` (Rust puede venir de aquí en vez del paso 1;
+     añade `/opt/homebrew/opt/rustup/bin` a tu `PATH`)
 3. Fuente VT323 (Google Fonts, licencia OFL): copia `VT323-Regular.ttf` a
    `~/.local/share/fonts/` y ejecuta `fc-cache -f`. Sin ella, RetroTerm usa la
-   fuente monoespaciada por defecto.
+   fuente monoespaciada por defecto. En macOS, haz doble clic en el `.ttf` e
+   instálala (va a `~/Library/Fonts`).
 4. Compilar y ejecutar:
    ```bash
    cargo run                 # compila (modo depuración) y arranca
@@ -414,3 +435,5 @@ Font License 1.1.
 - [x] Renombrar pestañas con el botón derecho (solo mientras están abiertas)
 - [x] Pestañas SSH con «perfil / servidor»
 - [x] Renombrar perfiles (botón «Renombrar…» en la ventana de conexiones)
+- [x] macOS (experimental): compila con Homebrew; contraseñas en el Llavero de macOS y desbloqueo con el PAM del sistema (OpenPAM)
+- [ ] macOS: atajos con ⌘ y paquete `.app`

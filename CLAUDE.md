@@ -5,7 +5,8 @@ empezar cada sesión. Mantenlas al día cuando cambie algo importante.
 
 ## Qué es
 
-RetroTerm: emulador de terminal personal para Linux con estética retro
+RetroTerm: emulador de terminal personal para Linux (y, de forma
+experimental desde la 0.28.0, macOS) con estética retro
 (fósforo verde/ámbar/blanco, fuente VT323, efectos CRT), en **Rust + GTK 4 +
 VTE**. Perfiles SSH, contraseñas en el llavero del sistema (KWallet),
 guiones post-conexión ("espera => escribe"), contraseñas de root desde un
@@ -58,6 +59,12 @@ Dependencias del sistema (openSUSE Tumbleweed, el equipo de Alfonso):
 `gcc pkgconf 'pkgconfig(gtk4)' 'pkgconfig(vte-2.91-gtk4)' 'pkgconfig(dbus-1)' pam-devel`
 (pam-devel para enlazar con libpam; ya no hace falta clang).
 
+macOS (Apple Silicon): Command Line Tools de Xcode y, con Homebrew,
+`brew install rustup vte3 pkgconf adwaita-icon-theme` + `rustup default stable`.
+`rustup` es keg-only: hay que tener `/opt/homebrew/opt/rustup/bin` en el
+`PATH`. Sin `adwaita-icon-theme`, los iconos de los botones (`*-symbolic`)
+salen como «imagen que falta»: Homebrew solo trae el tema `hicolor`.
+
 Después de tocar código, **compila siempre** y corrige los errores antes de
 dar nada por terminado. Las pruebas de interfaz las hace Alfonso a mano:
 dile exactamente qué probar.
@@ -67,7 +74,9 @@ dile exactamente qué probar.
 - `vte4 = { version = "0.9", features = ["v0_72"] }`: la 0.10 no compila con
   gtk4 0.11.5. `v0_72` hace falta para leer el texto de la pantalla.
 - `keepass = "=0.8.12"` (exacta): la 0.8.21 quitó `Node` y `Group.children`.
-- `keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }`
+- `keyring = "3"` va POR SISTEMA (`[target.'cfg(target_os = ...)'.dependencies]`):
+  Linux `["sync-secret-service", "crypto-rust"]`, macOS `["apple-native"]`.
+  Si cambias la versión, cámbiala en las dos secciones.
 - PAM sin crate: FFI propio en `pam_ffi.rs` (solo `libc = "0.2"`). Todo el
   `unsafe` del programa vive ahí; hacia fuera solo `autenticar()`.
 - `[profile.dev.package."*"] opt-level = 3`: sin esto, descifrar el .kdbx
@@ -90,7 +99,7 @@ dile exactamente qué probar.
 | `paleta.rs` | Paleta monocroma de 256 colores |
 | `crt.rs` | Capa CRT sobre cada terminal (líneas, viñeteado, marco); `terminal_de`/`pagina_de` |
 | `halo.rs` | Widget propio: halo del fósforo (terminal desenfocada + mezcla Screen, GSK) |
-| `llavero.rs` | Secret Service (KWallet): claves de perfiles y maestra de KeePass |
+| `llavero.rs` | Secret Service (KWallet) o Llavero de macOS: claves de perfiles y maestra de KeePass |
 | `boveda.rs` | KeePass: solo entradas `root`, solo en memoria; `CAMBIOS`; bloqueo automático (temporizador) |
 | `desbloqueo.rs` | Desbloqueo de KeePass (async, en otro hilo) |
 | `autorespuesta.rs` | "Espera => escribe": lee la línea del cursor y teclea |
@@ -148,6 +157,9 @@ siempre `crt::terminal_de()` y `crt::pagina_de()`, nunca `parent()`/`child()`.
   `pam_unix` no hay espera. Aun así, los paquetes siguen con la pila común
   (decidido el 2026-11-25): con solo `pam_unix`, quien tenga cuentas
   LDAP/SSSD no podría desbloquear. El README explica cómo quitar la espera.
+- **Linux-PAM y OpenPAM (macOS)** comparten funciones y estructuras, pero
+  NO todos los códigos de error: `PAM_CONV_ERR` es 19 / 6. Cualquier
+  constante nueva en `pam_ffi.rs`: comprobar su valor en los dos.
 - **Seguridad:** nunca escribir contraseñas en disco ni en la consola
   (`eprintln!`). KeePass: solo entradas `root`, solo en memoria.
   Ficheros de configuración: siempre con `ajustes::escribir_privado` (0600,
@@ -180,6 +192,7 @@ siempre `crt::terminal_de()` y `crt::pagina_de()`, nunca `parent()`/`child()`.
 ## Entorno de Alfonso (contexto útil)
 
 - openSUSE Tumbleweed, KDE Plasma 6, KWallet como Secret Service.
+- Un Mac con Apple Silicon para el port a macOS.
 - Servidores con contraseña + código OTP (el OTP lo teclea él).
 - Algunos servidores de otros equipos tienen `TMOUT=900`.
 - KeePass: grupos por servicio; una entrada `root` puede servir para una
@@ -189,3 +202,4 @@ siempre `crt::terminal_de()` y `crt::pagina_de()`, nunca `parent()`/`child()`.
 
 - Bloc de notas: botón «Enviar a la terminal» (pegar la selección o todo en
   la pestaña activa, pasando por `pegado::pegar`).
+- macOS: atajos con ⌘ además de Ctrl, y empaquetar un `.app`.
