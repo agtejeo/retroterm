@@ -12,9 +12,31 @@ sección aquí arriba del todo.
 Desde la 0.27.0, cada versión se describe en español y en inglés.
 *Since 0.27.0, each release is described in Spanish and English.*
 
+## [0.29.0] - 2026-11-26
+### Añadido
+- **`RetroTerm.app` para macOS** con `empaquetado/construir-app.sh`: compila
+  en modo optimizado, monta la app (icono generado del SVG, lanzador que
+  carga tu entorno con la shell de inicio de sesión, firma ad hoc), la
+  instala en `~/Applications` e instala la fuente VT323 si falta. Usa GTK 4
+  y VTE de Homebrew: es para el propio Mac.
+- README: instalación en macOS paso a paso, desde un Mac sin herramientas
+  hasta la app en el Dock. `librsvg` (para `rsvg-convert`) se añade a la
+  lista de `brew install`.
+
+### Added
+- **`RetroTerm.app` for macOS** with `empaquetado/construir-app.sh`: builds
+  in release mode, assembles the app (icon generated from the SVG, a
+  launcher that loads your environment through the login shell, ad hoc
+  signature), installs it in `~/Applications` and installs the VT323 font if
+  missing. It uses GTK 4 and VTE from Homebrew: it is meant for the same Mac.
+- README: step-by-step macOS installation, from a Mac with no tools to the
+  app in the Dock. `librsvg` (for `rsvg-convert`) is added to the
+  `brew install` list.
+
 ## [0.28.0] - 2026-11-26
 ### Añadido
-- **macOS (experimental)**, probado en Apple Silicon (M1):
+- **macOS (experimental)**, probado en Apple Silicon (M1; en Intel
+  debería compilar, sin probar):
   compila con GTK 4 y VTE de Homebrew
   (`brew install rustup vte3 pkgconf adwaita-icon-theme`; sin el tema de
   iconos Adwaita, los botones salen con el icono de «imagen que falta»).
@@ -29,7 +51,8 @@ Desde la 0.27.0, cada versión se describe en español y en inglés.
   elige con `#[cfg(target_os = "macos")]`. En Linux no cambia nada.
 
 ### Added
-- **macOS (experimental)**, tested on Apple Silicon (M1): builds
+- **macOS (experimental)**, tested on Apple Silicon (M1; Intel should
+  build too, untested): builds
   with GTK 4 and VTE from Homebrew
   (`brew install rustup vte3 pkgconf adwaita-icon-theme`; without the
   Adwaita icon theme, buttons show the «missing image» icon).
