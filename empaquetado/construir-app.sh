@@ -50,9 +50,22 @@ done
 echo ">> Compilando (cargo build --release)..."
 (cd "$PROYECTO" && cargo build --release)
 
-# ---- 2. Montar la app en target/app (se crea de cero cada vez)
-APP_TMP="$PROYECTO/target/app/RetroTerm.app"
-rm -rf "$APP_TMP"
+# ---- 2. Montar la app en una carpeta TEMPORAL
+#
+# No dentro del proyecto (p. ej. target/app): Spotlight indexa esa carpeta y
+# Launchpad mostraría DOS RetroTerm, la instalada y la copia de trabajo.
+# `mktemp -d` crea una carpeta vacía con nombre único en /tmp; `trap ... EXIT`
+# la borra al terminar el script, tanto si acaba bien como si falla.
+TRABAJO="$(mktemp -d)"
+trap 'rm -rf "$TRABAJO"' EXIT
+APP_TMP="$TRABAJO/RetroTerm.app"
+# Restos de la 0.29.0, que montaba la app en target/app: se quitan, y se
+# le dice a macOS que olvide esa copia («lsregister -u»).
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+if [[ -d "$PROYECTO/target/app" ]]; then
+    [[ -x "$LSREGISTER" ]] && "$LSREGISTER" -u "$PROYECTO/target/app/RetroTerm.app" 2>/dev/null || true
+    rm -rf "$PROYECTO/target/app"
+fi
 mkdir -p "$APP_TMP/Contents/MacOS" "$APP_TMP/Contents/Resources"
 cp "$PROYECTO/target/release/retroterm" "$APP_TMP/Contents/MacOS/retroterm"
 
@@ -100,8 +113,7 @@ EOF
 
 # ---- 3. Icono: del SVG a un .icns (todos los tamaños que pide macOS)
 echo ">> Generando el icono..."
-ICONSET="$PROYECTO/target/app/RetroTerm.iconset"
-rm -rf "$ICONSET"
+ICONSET="$TRABAJO/RetroTerm.iconset"
 mkdir -p "$ICONSET"
 for tamano in 16 32 128 256 512; do
     doble=$((tamano * 2))
@@ -122,7 +134,6 @@ mkdir -p "$DESTINO"
 rm -rf "$DESTINO/RetroTerm.app"
 cp -R "$APP_TMP" "$DESTINO/"
 # Avisar a macOS de que la app (y su icono) han cambiado.
-LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 [[ -x "$LSREGISTER" ]] && "$LSREGISTER" -f "$DESTINO/RetroTerm.app" || true
 
 # ---- 5. Fuente VT323 (SIL OFL 1.1), si no está ya instalada

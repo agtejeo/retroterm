@@ -12,6 +12,21 @@ sección aquí arriba del todo.
 Desde la 0.27.0, cada versión se describe en español y en inglés.
 *Since 0.27.0, each release is described in Spanish and English.*
 
+## [0.29.1] - 2026-11-26
+### Corregido
+- macOS: Launchpad y Spotlight mostraban **dos RetroTerm**. La segunda era la
+  copia de trabajo que `construir-app.sh` montaba en `target/app`, dentro
+  del proyecto, y que Spotlight indexaba. Ahora la app se monta en una
+  carpeta temporal que se borra al terminar, y el script quita y olvida la
+  copia de `target/app` que dejó la 0.29.0.
+
+### Fixed
+- macOS: Launchpad and Spotlight showed **two RetroTerm apps**. The second
+  one was the working copy that `construir-app.sh` assembled in
+  `target/app`, inside the project, which Spotlight indexed. The app is now
+  assembled in a temporary folder that is removed afterwards, and the script
+  removes and unregisters the `target/app` copy left by 0.29.0.
+
 ## [0.29.0] - 2026-11-26
 ### Añadido
 - **`RetroTerm.app` para macOS** con `empaquetado/construir-app.sh`: compila
