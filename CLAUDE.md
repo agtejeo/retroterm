@@ -60,7 +60,8 @@ Dependencias del sistema (openSUSE Tumbleweed, el equipo de Alfonso):
 (pam-devel para enlazar con libpam; ya no hace falta clang).
 
 macOS (Apple Silicon): Command Line Tools de Xcode y, con Homebrew,
-`brew install rustup vte3 pkgconf adwaita-icon-theme` + `rustup default stable`.
+`brew install rustup vte3 pkgconf adwaita-icon-theme librsvg` + `rustup default stable`
+(`librsvg` da `rsvg-convert`, para el icono de la `.app`).
 `rustup` es keg-only: hay que tener `/opt/homebrew/opt/rustup/bin` en el
 `PATH` (en Intel, Homebrew vive en `/usr/local`). Intel: sin probar. Sin `adwaita-icon-theme`, los iconos de los botones (`*-symbolic`)
 salen como «imagen que falta»: Homebrew solo trae el tema `hicolor`.

@@ -19,6 +19,9 @@ Desde la 0.27.0, cada versión se describe en español y en inglés.
   carga tu entorno con la shell de inicio de sesión, firma ad hoc), la
   instala en `~/Applications` e instala la fuente VT323 si falta. Usa GTK 4
   y VTE de Homebrew: es para el propio Mac.
+- README: instalación en macOS paso a paso, desde un Mac sin herramientas
+  hasta la app en el Dock. `librsvg` (para `rsvg-convert`) se añade a la
+  lista de `brew install`.
 
 ### Added
 - **`RetroTerm.app` for macOS** with `empaquetado/construir-app.sh`: builds
@@ -26,6 +29,9 @@ Desde la 0.27.0, cada versión se describe en español y en inglés.
   launcher that loads your environment through the login shell, ad hoc
   signature), installs it in `~/Applications` and installs the VT323 font if
   missing. It uses GTK 4 and VTE from Homebrew: it is meant for the same Mac.
+- README: step-by-step macOS installation, from a Mac with no tools to the
+  app in the Dock. `librsvg` (for `rsvg-convert`) is added to the
+  `brew install` list.
 
 ## [0.28.0] - 2026-11-26
 ### Añadido
