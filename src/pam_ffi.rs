@@ -35,10 +35,21 @@ use std::ptr;
 // de C (32 bits en Linux), `c_char` su `char`, `c_void` el "algo" de `void*`.
 use libc::{c_char, c_int, c_void};
 
-// ---- Constantes de pam_appl.h / _pam_types.h (valores de Linux-PAM)
+// ---- Constantes de pam_appl.h / _pam_types.h
+//
+// Linux usa Linux-PAM y macOS usa OpenPAM: las funciones y las estructuras
+// son las mismas, pero algunos códigos de error tienen OTRO número.
+// Estos coinciden en los dos:
 const PAM_SUCCESS: c_int = 0;
 const PAM_BUF_ERR: c_int = 5;
-const PAM_CONV_ERR: c_int = 19;
+// Y este no. `#[cfg(...)]` es "compilación condicional": la línea que le
+// sigue solo existe si se cumple la condición. Así hay UNA sola constante
+// `PAM_CONV_ERR` en cada sistema, con su valor correcto.
+// `not(target_os = "macos")`: en todo lo que no sea macOS (Linux…).
+#[cfg(not(target_os = "macos"))]
+const PAM_CONV_ERR: c_int = 19; // Linux-PAM (_pam_types.h)
+#[cfg(target_os = "macos")]
+const PAM_CONV_ERR: c_int = 6; // OpenPAM (security/pam_constants.h)
 /// Tipos de mensaje: pedir algo SIN eco (contraseña) o CON eco (usuario).
 const PAM_PROMPT_ECHO_OFF: c_int = 1;
 const PAM_PROMPT_ECHO_ON: c_int = 2;

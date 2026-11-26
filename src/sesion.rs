@@ -19,7 +19,9 @@
 //! Usamos el primero de estos que exista (solo uno; ver `servicios_disponibles`):
 //!   1. "retroterm" -> el que instalan los paquetes RPM / .deb.
 //!   2. "login"     -> el del inicio de sesión, que existe en todas partes
-//!                     (es el que se usa con `cargo run`).
+//!                     (es el que se usa con `cargo run`). En macOS también
+//!                     existe (/etc/pam.d/login) y comprueba la contraseña del
+//!                     Mac con `pam_opendirectory`.
 //!
 //! NO usamos "kde" (el de la pantalla de bloqueo de KDE): está pensado para
 //! su propio programa y rechaza a los demás. Peor aún, cada rechazo cuesta

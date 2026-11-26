@@ -12,6 +12,37 @@ sección aquí arriba del todo.
 Desde la 0.27.0, cada versión se describe en español y en inglés.
 *Since 0.27.0, each release is described in Spanish and English.*
 
+## [0.28.0] - 2026-11-26
+### Añadido
+- **macOS (experimental)**, probado en Apple Silicon (M1):
+  compila con GTK 4 y VTE de Homebrew
+  (`brew install rustup vte3 pkgconf adwaita-icon-theme`; sin el tema de
+  iconos Adwaita, los botones salen con el icono de «imagen que falta»).
+  - Las contraseñas de los perfiles y la maestra de KeePass se guardan en el
+    **Llavero de macOS**: en `Cargo.toml`, `keyring` usa `apple-native` en
+    macOS y sigue con `sync-secret-service` (KWallet / GNOME Keyring) en
+    Linux, mediante secciones `[target.'cfg(target_os = ...)'.dependencies]`.
+  - El desbloqueo usa el servicio PAM `login` de macOS (OpenPAM).
+
+### Corregido
+- `pam_ffi.rs`: `PAM_CONV_ERR` vale 19 en Linux-PAM y 6 en OpenPAM; ahora se
+  elige con `#[cfg(target_os = "macos")]`. En Linux no cambia nada.
+
+### Added
+- **macOS (experimental)**, tested on Apple Silicon (M1): builds
+  with GTK 4 and VTE from Homebrew
+  (`brew install rustup vte3 pkgconf adwaita-icon-theme`; without the
+  Adwaita icon theme, buttons show the «missing image» icon).
+  - Profile passwords and the KeePass master password are stored in the
+    **macOS Keychain**: in `Cargo.toml`, `keyring` uses `apple-native` on
+    macOS and keeps `sync-secret-service` (KWallet / GNOME Keyring) on Linux,
+    through `[target.'cfg(target_os = ...)'.dependencies]` sections.
+  - Unlocking uses the macOS `login` PAM service (OpenPAM).
+
+### Fixed
+- `pam_ffi.rs`: `PAM_CONV_ERR` is 19 in Linux-PAM and 6 in OpenPAM; it is
+  now chosen with `#[cfg(target_os = "macos")]`. Nothing changes on Linux.
+
 ## [0.27.1] - 2026-11-25
 ### Corregido
 - Desbloqueo: una contraseña mal tecleada podía tardar ~30 s en rechazarse.

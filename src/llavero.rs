@@ -9,14 +9,17 @@
 
 //! Contraseñas en el llavero del sistema.
 //!
-//! Usamos el estándar "Secret Service" de freedesktop.org, que implementan
-//! KWallet (KDE) y GNOME Keyring. El llavero cifra los secretos y los
+//! En Linux usamos el estándar "Secret Service" de freedesktop.org, que
+//! implementan KWallet (KDE) y GNOME Keyring. En macOS, el Llavero del
+//! sistema. El crate `keyring` elige el motor al compilar (ver Cargo.toml), y
+//! este código es el mismo en los dos. El llavero cifra los secretos y los
 //! desbloquea con tu sesión: nosotros nunca escribimos una contraseña en disco.
 //!
 //! Cada contraseña se guarda con:
 //!   servicio = "retroterm"
 //!   usuario  = "usuario@servidor:puerto"
-//! (en KWallet aparece dentro de la carpeta "Secret Service").
+//! (en KWallet aparece dentro de la carpeta "Secret Service"; en macOS, en
+//! «Acceso a Llaveros», como contraseña genérica llamada "retroterm").
 
 use keyring::{Entry, Error};
 
