@@ -107,6 +107,9 @@ VTE for GTK 4 ≥ 0.72 is required, so EL9, Debian 12 and Ubuntu 22.04 are
 **experimentally**, building from source with Homebrew (see below). There
 are no ready-made macOS packages yet. Passwords go to the macOS Keychain,
 and unlocking uses your Mac password through the system PAM service `login`.
+Intel Macs should work too (nothing in the code depends on the processor),
+but they are **untested**, and Homebrew is phasing out Intel support, so GTK
+and VTE may have to be compiled locally.
 
 ### Install a package
 
@@ -141,7 +144,8 @@ font, the icon, the menu entry and the PAM service `/etc/pam.d/retroterm`.
    - macOS: Xcode Command Line Tools (`xcode-select --install`) and, with
      [Homebrew](https://brew.sh), `brew install rustup vte3 pkgconf adwaita-icon-theme`, then
      `rustup default stable` (Rust can come from rustup instead of step 1;
-     add `/opt/homebrew/opt/rustup/bin` to your `PATH`)
+     add `/opt/homebrew/opt/rustup/bin` to your `PATH`, or
+     `/usr/local/opt/rustup/bin` on Intel Macs)
 3. VT323 font (Google Fonts, OFL): copy `VT323-Regular.ttf` to
    `~/.local/share/fonts/` and run `fc-cache -f`. Without it, RetroTerm falls
    back to the default monospace font. On macOS, double-click the `.ttf` and
@@ -181,6 +185,25 @@ What the scripts do:
 
 The first run downloads each distribution's package metadata and can take a
 while; later runs reuse the Rust toolchain and the compiled dependencies.
+
+### macOS app
+
+On macOS, `RetroTerm.app` is built and installed in `~/Applications` with:
+
+```bash
+./empaquetado/construir-app.sh                 # or: ... /Applications
+```
+
+It runs `cargo build --release`, builds the app bundle (with the icon made
+from the project's SVG via `rsvg-convert` and `iconutil`), signs it ad hoc
+and installs the VT323 font in `~/Library/Fonts` if it is missing. Run it
+again to update the app. The app starts RetroTerm through your login shell,
+so local tabs get the same `PATH` as a normal terminal.
+
+The app still uses GTK 4 and VTE from Homebrew: it works on this Mac, or on
+another one with the same Homebrew packages. The first time it reads a saved
+password, macOS asks whether `retroterm` may use the Keychain item: choose
+«Always Allow» (it may ask again after each rebuild).
 
 ### Configuration files
 
@@ -302,7 +325,9 @@ soportados.
 **experimental**, compilando desde el código con Homebrew (ver más abajo).
 Todavía no hay paquetes para macOS. Las contraseñas van al Llavero de macOS
 y el desbloqueo usa la contraseña del Mac con el servicio PAM `login` del
-sistema.
+sistema. En los Mac Intel debería funcionar también (nada del código depende
+del procesador), pero está **sin probar**, y Homebrew va retirando el soporte
+de Intel, así que puede tocar compilar GTK y VTE en el propio equipo.
 
 ### Instalar un paquete
 
@@ -339,7 +364,8 @@ la fuente VT323, el icono, la entrada del menú y el servicio PAM
    - macOS: Command Line Tools de Xcode (`xcode-select --install`) y, con
      [Homebrew](https://brew.sh), `brew install rustup vte3 pkgconf adwaita-icon-theme` y luego
      `rustup default stable` (Rust puede venir de aquí en vez del paso 1;
-     añade `/opt/homebrew/opt/rustup/bin` a tu `PATH`)
+     añade `/opt/homebrew/opt/rustup/bin` a tu `PATH`, o
+     `/usr/local/opt/rustup/bin` en los Mac Intel)
 3. Fuente VT323 (Google Fonts, licencia OFL): copia `VT323-Regular.ttf` a
    `~/.local/share/fonts/` y ejecuta `fc-cache -f`. Sin ella, RetroTerm usa la
    fuente monoespaciada por defecto. En macOS, haz doble clic en el `.ttf` e
@@ -379,6 +405,26 @@ Qué hacen los scripts:
 
 La primera vez descargan los índices de paquetes de cada distribución y
 pueden tardar; después reutilizan Rust y las dependencias ya compiladas.
+
+### Aplicación de macOS
+
+En macOS, `RetroTerm.app` se construye y se instala en `~/Applications` con:
+
+```bash
+./empaquetado/construir-app.sh                 # o: ... /Applications
+```
+
+Ejecuta `cargo build --release`, monta la app (con el icono hecho a partir del
+SVG del proyecto con `rsvg-convert` e `iconutil`), la firma ad hoc e instala
+la fuente VT323 en `~/Library/Fonts` si falta. Para actualizar la app, se
+vuelve a ejecutar. La app arranca RetroTerm a través de tu shell de inicio de
+sesión, así que las pestañas locales tienen el mismo `PATH` que una terminal
+normal.
+
+La app sigue usando GTK 4 y VTE de Homebrew: funciona en este Mac, o en otro
+con los mismos paquetes de Homebrew. La primera vez que lea una contraseña
+guardada, macOS preguntará si `retroterm` puede usar ese elemento del
+Llavero: elige «Permitir siempre» (puede volver a preguntar tras recompilar).
 
 ### Ficheros de configuración
 
@@ -436,4 +482,5 @@ Font License 1.1.
 - [x] Pestañas SSH con «perfil / servidor»
 - [x] Renombrar perfiles (botón «Renombrar…» en la ventana de conexiones)
 - [x] macOS (experimental): compila con Homebrew; contraseñas en el Llavero de macOS y desbloqueo con el PAM del sistema (OpenPAM)
-- [ ] macOS: atajos con ⌘ y paquete `.app`
+- [x] macOS: `RetroTerm.app` para el propio Mac (`empaquetado/construir-app.sh`)
+- [ ] macOS: atajos con ⌘ y una `.app` autónoma (con GTK y VTE dentro)

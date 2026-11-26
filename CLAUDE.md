@@ -62,7 +62,7 @@ Dependencias del sistema (openSUSE Tumbleweed, el equipo de Alfonso):
 macOS (Apple Silicon): Command Line Tools de Xcode y, con Homebrew,
 `brew install rustup vte3 pkgconf adwaita-icon-theme` + `rustup default stable`.
 `rustup` es keg-only: hay que tener `/opt/homebrew/opt/rustup/bin` en el
-`PATH`. Sin `adwaita-icon-theme`, los iconos de los botones (`*-symbolic`)
+`PATH` (en Intel, Homebrew vive en `/usr/local`). Intel: sin probar. Sin `adwaita-icon-theme`, los iconos de los botones (`*-symbolic`)
 salen como «imagen que falta»: Homebrew solo trae el tema `hicolor`.
 
 Después de tocar código, **compila siempre** y corrige los errores antes de
@@ -188,6 +188,11 @@ siempre `crt::terminal_de()` y `crt::pagina_de()`, nunca `parent()`/`child()`.
 - El `.deb` se configura en `[package.metadata.deb]` de `Cargo.toml`.
 - Servicios PAM por familia: `empaquetado/pam/retroterm-{suse,redhat,debian}`.
 - Al añadir dependencias de compilación, actualiza los dos scripts y el README.
+- `construir-app.sh` (macOS): `RetroTerm.app` en `~/Applications`. El
+  ejecutable de la app es `MacOS/lanzador` (zsh, carga la shell de inicio de
+  sesión y hace `exec` de `MacOS/retroterm`). **No llamar «RetroTerm» al
+  lanzador**: el disco de macOS no distingue mayúsculas y pisaría al binario.
+  Usa GTK/VTE de Homebrew (no es autónoma).
 
 ## Entorno de Alfonso (contexto útil)
 
@@ -202,4 +207,4 @@ siempre `crt::terminal_de()` y `crt::pagina_de()`, nunca `parent()`/`child()`.
 
 - Bloc de notas: botón «Enviar a la terminal» (pegar la selección o todo en
   la pestaña activa, pasando por `pegado::pegar`).
-- macOS: atajos con ⌘ además de Ctrl, y empaquetar un `.app`.
+- macOS: atajos con ⌘ además de Ctrl, y una `.app` autónoma (GTK y VTE dentro).
